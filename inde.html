@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Mi Amor Muak</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background: #000;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            cursor: none;
+        }
+        
+        /* Cursor */
+        .cursor {
+            width: 12px;
+            height: 12px;
+            background: #ff3366;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            mix-blend-mode: difference;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+        
+        .cursor.hover {
+            width: 60px;
+            height: 60px;
+            background: transparent;
+            border: 1px solid #ff3366;
+        }
+        
+        /* Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: #000;
+        }
+        
+        /* Contenido */
+        .content {
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* Navegación */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            mix-blend-mode: difference;
+        }
+        
+        .nav-logo {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.3em;
+            font-weight: 700;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+        }
+        
+        .nav-link {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            transition: color 0.3s;
+            position: relative;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: #ff3366;
+            transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .nav-link:hover {
+            color: #fff;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        /* Secciones */
+        .section {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 0 5vw;
+            margin-bottom: 50vh;
+        }
+        
+        .section:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Hero */
+        .hero {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            margin-bottom: 50vh;
+        }
+        
+        .hero-title {
+            font-family: 'Syncopate', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero-title .line {
+            display: block;
+            overflow: hidden;
+        }
+        
+        .hero-title .line-inner {
+            display: block;
+            transform: translateY(100%);
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+            opacity: 0;
+        }
+        
+        .hero-desc {
+            font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+            color: rgba(255,255,255,0.6);
+            max-width: 500px;
+            line-height: 1.6;
+            opacity: 0;
+        }
+        
+        .scroll-hint {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0;
+        }
+        
+        .scroll-line {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, #ff3366, transparent);
+            animation: scrollPulse 2s infinite;
+        }
+        
+        @keyframes scrollPulse {
+            0%, 100% { transform: scaleY(1); opacity: 1; }
+            50% { transform: scaleY(0.5); opacity: 0.3; }
+        }
+        
+        /* Layouts */
+        .split-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5rem;
+            align-items: center;
+            max-width: 1400px;
+            width: 100%;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 51, 102, 0.1);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            transition: all 0.4s ease;
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(255, 51, 102, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        /* Fotos */
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        .photo-item {
+            aspect-ratio: 3/4;
+            background: #111;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            /* cursor: pointer; */
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .photo-item:nth-child(2) {
+            transform: translateY(3rem);
+        }
+        
+        .photo-item:hover {
+            transform: scale(1.05) !important;
+            z-index: 10;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: none; /* Sin blanco y negro */
+            opacity: 0.92; /* Más claro */
+            transition: all 0.6s ease;
+        }
+        
+        .photo-item:hover img {
+            filter: none;
+            transform: none;
+        }
+        
+        /* Números de sección */
+        .section-number {
+            position: absolute;
+            font-family: 'Syncopate', sans-serif;
+            font-size: 20vw;
+            color: rgba(255, 51, 102, 0.05);
+            font-weight: 700;
+            z-index: -1;
+            pointer-events: none;
+            line-height: 1;
+        }
+        
+        /* Indicador de sección */
+        .section-indicator {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.4s;
+            cursor: pointer;
+        }
+        
+        .indicator-dot.active {
+            background: #ff3366;
+            transform: scale(1.5);
+            box-shadow: 0 0 20px #ff3366;
+        }
+        
+        @media (max-width: 768px) {
+            .split-layout {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 0 1rem;
+            }
+            .glass-card {
+                padding: 1.2rem;
+            }
+            .photos-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                padding: 0 0.5rem;
+            }
+            .photo-item {
+                aspect-ratio: 1/1;
+                min-height: 220px;
+            }
+            .photo-item img {
+                border-radius: 0.5rem;
+            }
+            .photo-item:nth-child(2) {
+                transform: none;
+            }
+            .nav {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1rem 1rem 0.5rem 1rem;
+            }
+            .nav-logo {
+                font-size: 1.1rem;
+            }
+            .nav-links, .section-indicator {
+                display: none;
+            }
+            .hero-title {
+                font-size: 2rem;
+            }
+            .hero-desc, .hero-subtitle {
+                font-size: 1rem;
+            }
+            .section-number {
+                font-size: 12vw;
+            }
+            .text-4xl, .text-6xl, .text-3xl, .text-5xl {
+                font-size: 1.5rem !important;
+            }
+            .text-6xl {
+                font-size: 2.2rem !important;
+            }
+            .text-5xl {
+                font-size: 1.7rem !important;
+            }
+            .text-3xl {
+                font-size: 1.2rem !important;
+            }
+            .max-w-6xl, .max-w-4xl {
+                max-width: 100vw !important;
+            }
+            .px-4 {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            .py-12 {
+                padding-top: 2rem !important;
+                padding-bottom: 2rem !important;
+            }
+            .scroll-hint {
+                bottom: 1rem;
+            }
+            body {
+                cursor: auto !important;
+            }
+            .cursor {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cursor" id="cursor"></div>
+    <div id="canvas-container"></div>
+
+    <div class="section-indicator">
+        <div class="indicator-dot active" data-section="0"></div>
+        <div class="indicator-dot" data-section="1"></div>
+        <div class="indicator-dot" data-section="2"></div>
+        <div class="indicator-dot" data-section="3"></div>
+    </div>
+
+    <nav class="nav">
+        <div class="nav-logo">NOSOTROS</div>
+        <div class="nav-links">
+
+        </div>
+    </nav>
+
+    <div class="content">
+        
+        <section class="hero" id="hero" data-section="0">
+            <div class="section-number" style="top: 0; left: -5%;">01</div>
+            
+            <div class="hero-subtitle">Para el amor de mi vida</div>
+            
+            <h1 class="hero-title">
+                <div class="line">
+                    <span class="line-inner">TE AMO</span>
+                </div>
+                <div class="line">
+                    <span class="line-inner" style="color: #ff3366;">MUCHO AMOR</span>
+                </div>
+            </h1>
+            
+            <p class="hero-desc">
+                Cada latido lleva tu nombre. Eres mi todo, te amo muak muak
+            </p>
+            
+            <div class="scroll-hint">
+                <span style="font-size: 0.6rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.4);"></span>
+                <div class="scroll-line"></div>
+            </div>
+        </section>
+
+        <section class="section" id="historia" data-section="1">
+            <div class="section-number" style="right: -10%; top: 10%;">02</div>
+            
+            <div class="split-layout">
+                <div class="glass-card">
+                    <h2 class="text-4xl md:text-5xl font-bold font-['Syncopate'] mb-6 leading-tight">
+                        Nuestra<br>
+                        <span style="color: #ff3366;">Historia</span>
+                    </h2>
+                    <p class="text-white/60 leading-relaxed mb-4">
+                        Desde ese dia en el paseo q te vi sola y me acerque a ti, supe que eras la persona con la que quería compartir mi vida. cada momento contigo ha sido hermoso y inolvidable.
+                    </p>
+                    <p class="text-white/60 leading-relaxed">
+                        Cada día me haces sentir amado y especial. eres mi compañera, mi amiga . gracias por ser tú, por amarme y por hacerme tan feliz y tenerme mucha paciencia. Te amo con todo mi corazón muak muak.
+                    </p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="glass-card">
+                        <h3 class="text-pink-500 text-sm tracking-widest uppercase mb-2">Primer salida</h3>
+                        <p class="text-white/70">Ese dia me la pase hablando fuimos ala 24 subimos al mirador luego si no mal recuerdo hizimos una promesa q pal proximo viernes ir a bubble tea  </p>
+                    </div>
+                    <div class="glass-card" style="margin-left: 2rem;">
+                        <h3 class="text-pink-500 text-sm tracking-widest uppercase mb-2">Primer Te Amo</h3>
+                        <p class="text-white/70">Lo se me costo decirlo pero cuando lo dije me senti el hombre mas feliz del mundo yaq gracias a ti entendi lo que era ser amado</p>
+                    </div>
+                    <div class="glass-card">
+                        <h3 class="text-pink-500 text-sm tracking-widest uppercase mb-2">Nuestro Futuro</h3>
+                        <p class="text-white/70">La verdad es que no sé qué nos espera en el futuro, pero quiero estar a tu lado en cada momento, enfrentando cualquier cosa y superar las discusiones.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="fotos" data-section="2">
+            <div class="section-number" style="left: -5%; bottom: 0;">03</div>
+            
+            <div class="w-full max-w-6xl">
+                <h2 class="text-4xl md:text-6xl font-bold font-['Syncopate'] text-center mb-16">
+                    Nuestros <span style="color: #ff3366;">Momentos</span>
+                </h2>
+                
+                <div class="photos-grid">
+                    <div class="photo-item">
+                        <img id="photo1" src="1.jpeg" alt="Foto 1">
+                    </div>
+                    <div class="photo-item">
+                        <img id="photo2" src="2.jpg" alt="Foto 2">
+                    </div>
+                    <div class="photo-item">
+                        <img id="photo3" src="3.jpg" alt="Foto 3">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="amor" data-section="3">
+            <div class="section-number" style="right: -5%; top: 0;">04</div>
+            
+            <div class="text-center max-w-4xl px-4">
+                <div class="text-6xl mb-8">💗</div>
+                
+                <h2 class="text-3xl md:text-5xl font-bold font-['Syncopate'] mb-8 leading-tight">
+                    "Eres la persona,<br>
+                    <span style="color: #ff3366;">que pensaba</span><br>
+                    que no existia"
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6 mt-12">
+                    <div class="glass-card text-left">
+                        <h3 class="text-pink-500 text-sm tracking-widest uppercase mb-4">¿Por qué te amo?</h3>
+                        <ul class="space-y-2 text-white/60 text-sm">
+                            <li>• por eres la unica que siempre esta ahi aguantandome </li>
+                            <li>• Por siempre me apoyas en todo</li>
+                            <li>• Por porque eres bonita y hermosa  </li>
+                            <li>si no me crees sube arriba y mira las imagenes</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="glass-card text-left">
+                        <h3 class="text-pink-500 text-sm tracking-widest uppercase mb-4">Promesas</h3>
+                        <ul class="space-y-2 text-white/60 text-sm">
+                            <li>• Querer siempre y amarte aunq estemos enojados jeje</li>
+                            <li>• Cambiar unas partes que se que no te gusta de mi </li>
+                            <li>• hacerte feliz no todos los dias pero algunos seran inolvidables</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="py-12 text-center text-white/30 text-xs tracking-widest uppercase relative z-10">
+            HECHO POR TU AMOR MUAK MUAK
+        </footer>
+    </div>
+
+    <script>
+        // Cursor
+        const cursor = document.getElementById('cursor');
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animateCursor() {
+            cursorX += (mouseX - cursorX) * 0.1;
+            cursorY += (mouseY - cursorY) * 0.1;
+            cursor.style.left = cursorX + 'px';
+            cursor.style.top = cursorY + 'px';
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        document.querySelectorAll('a, .glass-card, .indicator-dot').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+
+        // Three.js
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.015);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true 
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 1);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Crear corazones 3D
+        const hearts = [];
+        const heartCount = 60;
+
+        const sectionPositions = [
+            { z: 0, y: 0 },
+            { z: -30, y: 0 },
+            { z: -60, y: 0 },
+            { z: -90, y: 0 }
+        ];
+
+        for (let h = 0; h < heartCount; h++) {
+            const heartShape = new THREE.Shape();
+            heartShape.moveTo(0, 0);
+            heartShape.bezierCurveTo(0, -3, -5, -3, -5, 0);
+            heartShape.bezierCurveTo(-5, 5, 0, 8, 0, 12);
+            heartShape.bezierCurveTo(0, 8, 5, 5, 5, 0);
+            heartShape.bezierCurveTo(5, -3, 0, -3, 0, 0);
+
+            const geometry = new THREE.BufferGeometry();
+            const points = heartShape.getPoints(30);
+            const positions = [];
+            
+            points.forEach(point => {
+                positions.push(point.x, point.y - 4, 0);
+            });
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0xff3366,
+                size: 0.2 + Math.random() * 0.15,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const heart = new THREE.Points(geometry, material);
+            
+            const sectionIndex = Math.floor(Math.random() * 4);
+            const basePos = sectionPositions[sectionIndex];
+            
+            heart.position.x = (Math.random() - 0.5) * 40;
+            heart.position.y = basePos.y + (Math.random() - 0.5) * 20;
+            heart.position.z = basePos.z + (Math.random() - 0.5) * 15;
+            
+            heart.rotation.x = Math.random() * Math.PI;
+            heart.rotation.y = Math.random() * Math.PI;
+            
+            heart.userData = {
+                rotSpeed: {
+                    x: (Math.random() - 0.5) * 0.01,
+                    y: (Math.random() - 0.5) * 0.01
+                },
+                floatSpeed: 0.005 + Math.random() * 0.01,
+                floatOffset: Math.random() * Math.PI * 2,
+                baseZ: heart.position.z,
+                section: sectionIndex
+            };
+            
+            scene.add(heart);
+            hearts.push(heart);
+        }
+
+        const ambientLight = new THREE.AmbientLight(0xff3366, 0.3);
+        scene.add(ambientLight);
+
+        // Sistema de cámara con velocidad LENTA
+        let currentSection = 0;
+        let targetZ = 5;
+        let targetY = 0;
+        let currentZ = 5;
+        let currentY = 0;
+
+        // VELOCIDAD REDUCIDA para acercamiento lento (0.02 en lugar de 0.05)
+        const cameraLerpSpeed = 0.02;
+
+        const cameraPositions = [
+            { z: 5, fov: 75 },
+            { z: -25, fov: 75 },
+            { z: -55, fov: 75 },
+            { z: -85, fov: 75 }
+        ];
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Triggers para cada sección
+        document.querySelectorAll('.section, .hero').forEach((section, index) => {
+            
+            // Entrar a sección - acercamiento LENTO
+            ScrollTrigger.create({
+                trigger: section,
+                start: "top 60%",
+                end: "center center",
+                scrub: 1.5, // Aumentado para suavidad
+                onUpdate: (self) => {
+                    if (self.direction === 1) { // Bajando
+                        const progress = self.progress;
+                        const target = cameraPositions[index];
+                        // Interpolación suave hacia la sección
+                        targetZ = target.z + (1 - progress) * 15; // Empieza alejado y se acerca
+                    }
+                },
+                onEnter: () => {
+                    currentSection = index;
+                    updateIndicator(index);
+                },
+                onEnterBack: () => {
+                    currentSection = index;
+                    updateIndicator(index);
+                }
+            });
+
+            // Salir de sección - alejamiento
+            ScrollTrigger.create({
+                trigger: section,
+                start: "center center",
+                end: "bottom top",
+                scrub: 1,
+                onUpdate: (self) => {
+                    const progress = self.progress;
+                    const currentPos = cameraPositions[index];
+                    const nextPos = cameraPositions[index + 1] || currentPos;
+                    
+                    if (index < 3) {
+                        // Alejarse al salir
+                        const midZ = (currentPos.z + nextPos.z) / 2;
+                        const awayZ = midZ + 25;
+                        targetZ = currentPos.z + (awayZ - currentPos.z) * progress;
+                    }
+                }
+            });
+        });
+
+        function updateIndicator(index) {
+            document.querySelectorAll('.indicator-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+        }
+
+        // Click en indicadores
+        document.querySelectorAll('.indicator-dot').forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const section = document.querySelector(`[data-section="${index}"]`);
+                if (section) {
+                    section.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Animación principal con velocidad LENTA
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+            
+            // Interpolación LENTA de cámara (0.02)
+            currentZ += (targetZ - currentZ) * cameraLerpSpeed;
+            currentY += (targetY - currentY) * cameraLerpSpeed;
+            
+            camera.position.z = currentZ;
+            camera.position.y = currentY;
+            
+            // Rotación suave
+            camera.rotation.z = Math.sin(time * 0.1) * 0.02;
+            camera.lookAt(0, currentY, currentZ - 10);
+            
+            // Animar corazones
+            hearts.forEach((heart, i) => {
+                const data = heart.userData;
+                
+                heart.rotation.x += data.rotSpeed.x;
+                heart.rotation.y += data.rotSpeed.y;
+                
+                heart.position.y += Math.sin(time * data.floatSpeed + data.floatOffset) * 0.01;
+                
+                const dist = Math.abs(heart.position.z - camera.position.z);
+                const scale = Math.max(0.3, 1 - dist / 50);
+                heart.scale.setScalar(scale);
+                
+                heart.material.opacity = Math.max(0.2, 1 - dist / 40) * 0.7;
+            });
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // GSAP Animaciones de entrada
+        const tl = gsap.timeline({ delay: 0.5 });
+        
+        tl.to('.hero-subtitle', {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: 'power3.out'
+        })
+        .to('.hero-title .line-inner', {
+            y: '0%',
+            duration: 1.2,
+            stagger: 0.15,
+            ease: 'power4.out'
+        }, '-=0.6')
+        .to('.hero-desc', {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: 'power3.out'
+        }, '-=0.8')
+        .to('.scroll-hint', {
+            opacity: 1,
+            duration: 1
+        }, '-=0.5');
+
+        // Animaciones scroll
+        gsap.utils.toArray('.glass-card').forEach((card, i) => {
+            gsap.from(card, {
+                scrollTrigger: {
+                    trigger: card,
+                    start: 'top 85%',
+                    toggleActions: 'play none none reverse'
+                },
+                y: 60,
+                opacity: 0,
+                duration: 0.8,
+                delay: i * 0.1,
+                ease: 'power3.out'
+            });
+        });
+
+        gsap.from('.photo-item', {
+            scrollTrigger: {
+                trigger: '#fotos',
+                start: 'top 70%'
+            },
+            y: 100,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.15,
+            ease: 'power3.out'
+        });
+
+        // Navegación suave
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Eliminado el cambio de fotos por clic
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
